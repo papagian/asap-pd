@@ -7,11 +7,11 @@ Select rid,hour,dow, avg(num) as num from
 --(select id as rid, hour, dow, num from data_raw where doy>=1 and doy<=31) t 
 (select id as rid, hour, dow, num from data_raw where doy>=32 and doy<=58) t 
 where rid in (select nidt from voronoi)
-group by rid, hour, dow;
+group by rid,hour,dow;
 
 create table cp_analyze as
 select id as rid, hour, doy, dow, num from data_raw
-where id in (select nidt from voronoi);
+where id in (select nidt from voronoi) and doy >= 59;
 
 create table events as
 select  a.rid, a.hour, a.doy, a.dow, 

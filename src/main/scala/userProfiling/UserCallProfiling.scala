@@ -1,3 +1,5 @@
+package ta
+
 import com.typesafe.config.{Config, ConfigValueFactory}
 import org.apache.spark._
 import org.apache.spark.SparkContext._
@@ -10,7 +12,7 @@ import org.joda.time.{DateTime, DateTimeConstants}
 import org.joda.time.format.DateTimeFormat
 
 object UserCallProfiling {
-  def parseCall(l: String, delim: String = ";")  = {
+  def parseCall(l: String, delim: String = " ; ")  = {
     val a = l.split(delim, -1).map(_.trim)
     Call(a).getOrElse(None)
   }
@@ -32,10 +34,11 @@ object UserCallProfiling {
     }.collect
 
     val stc = data.filter(_.length != 0).map(parseCall(_)).map{
-      case c@Call(_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_) =>
+      case c@Call(_,_,_,_,_) =>
         SpaceTimeCall(
-          c.callingSubscriberImsi,
-          c.city,
+          c.callingPartyNumberKey,
+          //c.city,
+          "ROMA",
           c.dateTime.getWeekOfWeekyear,
           c.isWeekday,
           c.timeSlot,
@@ -68,11 +71,9 @@ object UserCallProfiling {
     val usage = (s"Usage: submit.sh ${appName} <master> <cdrLocation> " +
                  "<geoLocation> <outputLocation> " +
                  s"<baseSince (${Call.datePattern})> " +
-                 s"<baseUntil (${Call.datePattern})> " +
-                 "<maxCores> <driverMem> " +
-                 "<executorMem>")
+                 s"<baseUntil (${Call.datePattern})>")
 
-    if (args.length != 9) {
+    if (args.length != 6) {
       System.err.println(usage)
       System.exit(1)
     }
@@ -83,16 +84,10 @@ object UserCallProfiling {
     val outputLocation=args(3)
     val baseSince = Call.dateFormat.parseDateTime(args(4))
     val baseUntil = Call.dateFormat.parseDateTime(args(5))
-    val maxCores = args(6)
-    val driverMem = args(7)
-    val executorMem = args(8)
 
     val conf = new SparkConf()
       .setAppName(appName)
       .setMaster(master)
-      .set("spark.cores.max", maxCores)
-      .set("spark.driver.memory", driverMem)
-      .set("spark.executor.memory", executorMem)
     val sc = new SparkContext(conf)
 
     val data = sc.textFile(cdrLocation)

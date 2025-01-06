@@ -1,30 +1,16 @@
+package ta
+
 import scala.util.Try
 
 import org.joda.time.{DateTime, DateTimeConstants}
 import org.joda.time.format.DateTimeFormat
 
 case class Call(
-  val cdrType: String,
   val callingPartyNumberKey: String,
-  val callingSubscriberImsi: String,
   val dateTime: DateTime,
   val chargeableDuration: String,
-  val exchangeIdentity: String,
-  val outgoingRoute: String,
-  val incomingRoute: String,
   val cellId1stCellCalling: String,
-  val gsmTeleServiceCode: String,
-  val cellIdLastCellCalling: String,
-  val disconnectingParty: String,
-  val callingSubscriberImei: String,
-  val tac: String,
-  val residentCustomerFlag: String,
-  val paymentType: String,
-  val contractStatus: String,
-  val contractStartingDate: String,
-  val country: String,
-  val cityPostalCode: String,
-  val city: String
+  val cellIdLastCellCalling: String
 ){
   val isWeekday = dateTime.getDayOfWeek < DateTimeConstants.SATURDAY
   def timeSlot(duration: Int) = dateTime.getHourOfDay / duration
@@ -32,7 +18,7 @@ case class Call(
 }
 
 object Call {
-  val datePattern = "yyyyMMdd"
+  val datePattern = "yyyy-MM-dd"
   val timePattern = "HHmmss"
   val datetimeDelim = ":"
   val datetimePattern = Array(datePattern, timePattern).mkString(datetimeDelim)
@@ -46,9 +32,7 @@ object Call {
     val dt = datetimeFormat.parseDateTime(dateTime)
 
     new Call(
-      a(0), a(1), a(2), dt, a(5), a(6), a(7), a(8), a(9), a(10),
-      a(11), a(12), a(13), a(14), a(15), a(16), a(17), a(18), a(19),
-      a(20), a(21)
+      a(0), dt, a(5), a(9), a(10)
     )
    }
   }
@@ -71,6 +55,14 @@ case class DataRaw(
 object DataRaw {
   def apply(c: CDR, num: Int): DataRaw =
     new DataRaw(c.id, c.hour, c.dow, c.doy, num)
+
+  def apply(str: String) = {
+    val pattern = """^DataRaw\((\S*),(\d*),(\d*),(\d*),(\d*)\)""".r
+    str match {
+      case pattern(id, hour, dow, doy, num) =>
+        new DataRaw(id, hour.toInt, dow.toInt, doy.toInt, num.toInt)
+    }
+  }
 }
 
 case class CpBase(
@@ -79,6 +71,15 @@ case class CpBase(
   val dow: Int,
   val num: Int
 )
+object CpBase {
+  def apply(str: String) = {
+    val pattern = """^CpBase\((\S*),(\d*),(\d*),(\d*)\)""".r
+    str match {
+      case pattern(id, hour, dow, num) =>
+        new CpBase(id, hour.toInt, dow.toInt, num.toInt)
+    }
+  }
+}
 
 case class Key(
   val id: String,
@@ -87,7 +88,10 @@ case class Key(
 )
 
 case class Event(
-  val k: Key,
+  val id: String,
+  val hour: Int,
+  val doy: Int,
+  val dow: Int,
   val ratio: Double,
   val aNum: Double,
   val bNum: Double
@@ -128,5 +132,22 @@ object Antenna {
       safeDouble(a(6))
     )
    }
+  }
+}
+
+case class Profile(
+  val city: String,
+  val week: Int,
+  val isWeekend: Int,
+  val timesplit: Int,
+  val count: Double
+)
+object Profile {
+  val pattern = """\((\S*), (\d), (\d), (\d), (\d*.\d*)\)""".r
+  def apply(str: String) = {
+    str match {
+      case pattern(city, week, isWeekend, timesplit, count) =>
+        new Profile(city, week.toInt, isWeekend.toInt, timesplit.toInt, count.toDouble)
+    }
   }
 }
